@@ -1,0 +1,7 @@
+com/syonet/domain/Pais.class
+com/syonet/Main.class
+com/syonet/generic/GenericDAO.class
+com/syonet/api/PaisAPI.class
+com/syonet/dao/PaisDAOImpl.class
+com/syonet/domain/Cidade.class
+com/syonet/dao/CidadeDAOImpl.class
