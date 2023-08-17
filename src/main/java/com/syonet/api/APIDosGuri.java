@@ -44,61 +44,85 @@ public class APIDosGuri {
       OutputStream outputStream = client.getOutputStream();
 
       String request = readRequest(inputStream);
-      String response = processRequest(request);
 
-      outputStream.write( response.getBytes() );
-			outputStream.flush();
-			client.close();
+      if( request != null && !request.isEmpty() ) {
+        String response = processRequest(request);
+        
+        outputStream.write( response.getBytes() );
+        outputStream.flush();
+      }
+
+      client.close();  
     } catch ( IOException e ) {
       e.printStackTrace();
     }
   }
 
   private String processRequest( String request ) {
-    String response;
+    String response = null;
 
-    if ( request.contains( "GET /paises?id=" ) ) {
+    if ( request.contains( "GET" ) ) {
+      response = handleGetRequest( request );
+    } 
+    
+    if ( request.contains( "POST" ) || request.contains( "PUT" ) ) {
+      response = handlePostRequest( request );
+    } 
+    
+    if ( request.contains( "DELETE" ) ) {
+      response = handleDeleteRequest( request );
+    } 
+
+    return response;
+  }
+
+  private String handleGetRequest( String request ) {
+    if ( request.contains( "/paises?id=" ) ) {
       List< Pais > pais = new ArrayList<>();
       pais.add( pdao.getById( extractPaisId( request ) ) );
-      response = OK_RESPONSE + serializeGenericList( pais );
+      return OK_RESPONSE + serializeGenericList( pais );
+    }
+    if( request.contains( "/paises?estado=" ) || request.contains( "/paises?regiao=" ) ) {
+      return OK_RESPONSE + serializeGenericList( pdao.getAll() );
+    }
+    if( request.contains( "/paises" ) ) {
+      return OK_RESPONSE + serializeGenericList( pdao.getAll() );
+    }    
+    if( request.contains( "/cidades?estado=" ) || request.contains( "/cidades?regiao=" ) ) {
+      return OK_RESPONSE + serializeGenericList( filterCidades(request) );
+    }   
+    if( request.contains( "/cidades" ) ) {
+      return OK_RESPONSE + serializeGenericList( cdao.getAll() );
+    }
+    return BAD_REQUEST_RESPONSE;
+  }
 
-    } else if( request.contains( "GET /paises?estado=" ) || request.contains( "GET /paises?regiao=" ) ) {
-      response = OK_RESPONSE + serializeGenericList( pdao.getAll() );
-
-    } else if( request.contains( "GET /paises" ) ) {
-      response = OK_RESPONSE + serializeGenericList( pdao.getAll() );
-
-    } else if ( request.contains( "POST /paises" ) || request.contains( "PUT /paises" ) ) {
+  private String handlePostRequest( String request ) {
+    if ( request.contains( "/paises" ) ) {
       String json = request.substring( request.indexOf( "[" ) );
-      persistPaisJson( json );
-      response = OK_RESPONSE + "Sucesso.";
+      persistGenericJson( json, new TypeReference<List<Pais>>() {}, pdao );
+      return OK_RESPONSE + "Sucesso.";
+    }
+    if ( request.contains( "/cidades" ) || request.contains( "/cidades" ) ) {
+      String json = request.substring( request.indexOf( "[" ) );
+      persistGenericJson( json, new TypeReference<List<Cidade>>() {}, cdao );
+      return OK_RESPONSE + "Sucesso.";
+    }
+    return BAD_REQUEST_RESPONSE;
+  }
 
-    } else if ( request.contains( "DELETE /paises" ) ) {
+  private String handleDeleteRequest( String request ) {
+    if ( request.contains( "/paises" ) ) {
       String json = request.substring( request.indexOf( "[" ) );
       deleteGenericJson( json, new TypeReference<List<Pais>>() {}, pdao );
-      response = OK_RESPONSE + "Sucesso.";
-
-    } else if( request.contains( "GET /cidades?estado=" ) || request.contains( "GET /cidades?regiao=" ) ) {
-      response = OK_RESPONSE + serializeGenericList( filterCidades(request) );
-
-    } else if( request.contains( "GET /cidades" ) ) {
-      response = OK_RESPONSE + serializeGenericList( cdao.getAll() );
-
-    } else if ( request.contains( "POST /cidades" ) || request.contains( "PUT /cidades" ) ) {
-      String json = request.substring( request.indexOf( "[" ) );
-      persistCidadesJson( json );
-      response = OK_RESPONSE + "Sucesso.";
-
-    } else if ( request.contains( "DELETE /cidades" ) ) {
+      return OK_RESPONSE + "Sucesso.";
+    }
+    if ( request.contains( "/cidades" ) ) {
       String json = request.substring( request.indexOf( "[" ) );
       deleteGenericJson( json, new TypeReference<List<Cidade>>() {}, cdao );
-      response = OK_RESPONSE + "Sucesso.";
-
-    } else {
-      response = BAD_REQUEST_RESPONSE;
-    }
-    return response;
-
+      return OK_RESPONSE + "Sucesso.";
+    } 
+    return BAD_REQUEST_RESPONSE;
   }
 
   private List< Cidade > filterCidades( String request ) {
@@ -163,30 +187,16 @@ public class APIDosGuri {
     }
   }
 
-  private void persistPaisJson( String json ){
-    List< Pais > paises = new ArrayList<>();
+  private < T > void persistGenericJson( String json, TypeReference<List<T>> typeReference, GenericDAO< T > dao  ){
+    List< T > objects = new ArrayList<>();
     try {
-        paises = objectMapper.readValue( json, new TypeReference<List<Pais>>() {} );
+        objects = objectMapper.readValue( json, typeReference );
 
-        paises.forEach( pais -> {
-              pais.getCidades().forEach( cidade -> cidade.setPais( pais )  );
-              pdao.create( pais );
+        objects.forEach( object -> {
+              if ( object instanceof Pais ) ( ( Pais ) object ).getCidades().forEach( cidade -> cidade.setPais( ( Pais ) object ) );
+              dao.create( object );
           });
-    } catch ( Exception e ) {
-        System.out.println( "Não foi possível retornar objetos a partir do JSON.");
-        e.printStackTrace();
-        return;
-    }
-  }
 
-  private void persistCidadesJson( String json ){
-    List< Cidade > cidades = new ArrayList<>();
-    try {
-        cidades = objectMapper.readValue( json, new TypeReference<List<Cidade>>() {} );
-
-        cidades.forEach( cidade -> {
-              cdao.create( cidade );
-          });
     } catch ( Exception e ) {
         System.out.println( "Não foi possível retornar objetos a partir do JSON.");
         e.printStackTrace();

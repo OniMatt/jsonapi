@@ -1,7 +1,11 @@
+com/syonet/api/APIDosGuri$2.class
 com/syonet/domain/Pais.class
+com/syonet/api/APIDosGuri$4.class
 com/syonet/Main.class
 com/syonet/generic/GenericDAO.class
-com/syonet/api/PaisAPI.class
 com/syonet/dao/PaisDAOImpl.class
+com/syonet/api/APIDosGuri$3.class
+com/syonet/api/APIDosGuri$1.class
 com/syonet/domain/Cidade.class
+com/syonet/api/APIDosGuri.class
 com/syonet/dao/CidadeDAOImpl.class
